@@ -44,7 +44,7 @@ func (h *WebTransportServer) GoListenAndServeContext(ctx context.Context, addr s
 	return h.GoServe(ctx, l, handler)
 }
 
-func (h *WebTransportServer) GoServe(ctx context.Context, l quic.EarlyListener, handler http.Handler) error {
+func (h *WebTransportServer) GoServe(ctx context.Context, l *quic.EarlyListener, handler http.Handler) error {
 	if ctx == nil {
 		return errors.New("ctx must be set")
 	}
@@ -53,7 +53,7 @@ func (h *WebTransportServer) GoServe(ctx context.Context, l quic.EarlyListener, 
 	h.H3.Handler = handler
 	h.waiter, ctx = errgroup.WithContext(ctx)
 	h.waiter.Go(func() error {
-		return h.ServeListener(l)
+		return h.H3.ServeListener(l)
 	})
 	go func() {
 		<-ctx.Done()

@@ -16,7 +16,6 @@ import (
 	"github.com/jpillora/chisel/share/cos"
 	"github.com/jpillora/chisel/share/settings"
 	"github.com/quic-go/quic-go"
-	"github.com/quic-go/quic-go/http3"
 	"github.com/quic-go/webtransport-go"
 	"golang.org/x/crypto/ssh"
 )
@@ -84,11 +83,9 @@ func (c *Client) connectionOnce(ctx context.Context) (connected bool, err error)
 	if c.config.PreferWebTransport && c.tlsConfig != nil {
 		c.Debugf("Preparing WebTransport dialer")
 		d := webtransport.Dialer{
-			RoundTripper: &http3.RoundTripper{
-				TLSClientConfig: c.tlsConfig,
-				QuicConfig: &quic.Config{
-					HandshakeIdleTimeout: settings.EnvDuration("WS_TIMEOUT", 45*time.Second),
-				},
+			TLSClientConfig: c.tlsConfig,
+			QUICConfig: &quic.Config{
+				HandshakeIdleTimeout: settings.EnvDuration("WS_TIMEOUT", 45*time.Second),
 			},
 		}
 		//optional proxy

@@ -23,7 +23,7 @@ type TLSConfig struct {
 	CA      string
 }
 
-func (s *Server) listener(host, port string) (net.Listener, quic.EarlyListener, error) {
+func (s *Server) listener(host, port string) (net.Listener, *quic.EarlyListener, error) {
 	hasDomains := len(s.config.TLS.Domains) > 0
 	hasKeyCert := s.config.TLS.Key != "" && s.config.TLS.Cert != ""
 	if hasDomains && hasKeyCert {
@@ -50,7 +50,7 @@ func (s *Server) listener(host, port string) (net.Listener, quic.EarlyListener, 
 		return nil, nil, err
 	}
 	//quic listener
-	var q quic.EarlyListener
+	var q *quic.EarlyListener
 	//optionally wrap in tls
 	proto := "http"
 	if tlsConf != nil {

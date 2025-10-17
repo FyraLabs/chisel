@@ -7,11 +7,11 @@ import (
 )
 
 type wtConn struct {
-	webtransport.Stream
+	*webtransport.Stream
 }
 
 // NewWebTransportConn converts a webtransport.Stream into a net.Conn
-func NewWebTransportConn(webtransportConn webtransport.Stream) net.Conn {
+func NewWebTransportConn(webtransportConn *webtransport.Stream) net.Conn {
 	c := wtConn{
 		Stream: webtransportConn,
 	}
