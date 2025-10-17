@@ -1,33 +1,35 @@
-on: [push, pull_request]
 name: CI
+on:
+  pull_request: {}
+  push: {}
+permissions: write-all
 jobs:
   # ================
-  # TEST JOB
-  #   runs on every push and PR
-  #   runs 2x3 times (see matrix)
+  # BUILD AND TEST JOB
   # ================
   test:
-    name: Test
+    name: Build & Test
     strategy:
       matrix:
-        go-version: [1.16.x, 1.17.x, 1.18.x, 1.19.x]
+        go-version: ["stable"]
         platform: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.platform }}
     steps:
-      - name: Install Go
-        uses: actions/setup-go@v3
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ matrix.go-version }}
-      - name: Checkout code
-        uses: actions/checkout@v3
+          check-latest: true
       - name: Build
         run: go build -v -o /dev/null .
       - name: Test
         run: go test -v ./...
   # ================
-  # RELEASE JOBS
-  #   runs after a success test
-  #   only runs on push "v*" tag
+  # RELEASE BINARIES (on push "v*" tag)
   # ================
   release_binaries:
     name: Release Binaries
@@ -36,14 +38,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - name: goreleaser
         if: success()
         uses: docker://goreleaser/goreleaser:latest
         env:
+          GITHUB_USER: ${{ github.repository_owner }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GOTOOLCHAIN: auto
         with:
           args: release --config .github/goreleaser.yml
+  # ================
+  # RELEASE DOCKER IMAGES (on push "v*" tag)
+  # ================
   release_docker:
     name: Release Docker Images
     needs: test
@@ -51,20 +60,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
       - name: Login to DockerHub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: jpillora
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Docker meta
-        id: docker_meta
-        uses: docker/metadata-action@v4
+        id: meta
+        uses: docker/metadata-action@v5
         with:
           images: jpillora/chisel
           tags: |
@@ -72,10 +80,13 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
       - name: Build and push
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v6
         with:
           context: .
+          file: .github/Dockerfile
           platforms: linux/amd64,linux/arm64,linux/ppc64le,linux/386,linux/arm/v7,linux/arm/v6
           push: true
-          tags: ${{ steps.docker_meta.outputs.tags }}
-          labels: ${{ steps.docker_meta.outputs.labels }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -8,10 +8,10 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -108,7 +108,7 @@ func NewClient(c *Config) (*Client, error) {
 		tlsConfig: nil,
 	}
 	//set default log level
-	client.Logger.Info = c.Verbose
+	client.Logger.Info = true
 	//configure tls
 	if u.Scheme == "wss" || u.Scheme == "https" {
 		tc := &tls.Config{}
@@ -121,7 +121,7 @@ func NewClient(c *Config) (*Client, error) {
 			tc.InsecureSkipVerify = true
 		} else if c.TLS.CA != "" {
 			rootCAs := x509.NewCertPool()
-			if b, err := ioutil.ReadFile(c.TLS.CA); err != nil {
+			if b, err := os.ReadFile(c.TLS.CA); err != nil {
 				return nil, fmt.Errorf("Failed to load file: %s", c.TLS.CA)
 			} else if ok := rootCAs.AppendCertsFromPEM(b); !ok {
 				return nil, fmt.Errorf("Failed to decode PEM: %s", c.TLS.CA)
